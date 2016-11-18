@@ -1,0 +1,820 @@
+\documentclass{beamer}
+
+% load packages
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{upquote}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{color}
+\usepackage{lmodern}
+
+\input{../header.tex}
+
+\title[Getting data from the web with R]{\LARGE Getting Data from the Web with R} 
+\subtitle[Web Data in R]{\large Part 5: Handling JSON data}
+\author[gastonsanchez.com]{
+ \textcolor{gray}{\textbf{G}aston \textbf{S}anchez}
+}
+\institute[]{\scriptsize \textcolor{lightgray}{April-May 2014}}
+\date[CC BY-SA-NC 4.0]{
+ \textcolor{lightgray}{\tiny{Content licensed under 
+ \href{http://creativecommons.org/licenses/by-nc-sa/4.0/}{CC BY-NC-SA 4.0}}}
+}
+
+
+\begin{document}
+<<setup, include=FALSE>>=
+# smaller font size for chunks
+opts_chunk$set(size = 'tiny')
+thm <- knit_theme$get("bclear")
+knit_theme$set(thm)
+options(width=78)
+@
+
+
+%--- the titlepage frame -------------------------%
+
+\begin{frame}[plain]
+ \titlepage
+\end{frame}
+
+%------------------------------------------------
+
+{ % all template changes are local to this group.
+    \setbeamertemplate{navigation symbols}{}
+    \begin{frame}[plain]
+        \begin{tikzpicture}[remember picture,overlay]
+            \node[at=(current page.center)] {
+                \includegraphics[width=\paperwidth]{images/json_cover.png}
+            };
+        \end{tikzpicture}
+     \end{frame}
+}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Readme}
+
+\begin{block}{\scriptsize License:}
+\tiny
+ \begin{itemize}
+  \item[] Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License \\ 
+  \url{http://creativecommons.org/licenses/by-nc-sa/4.0/}{}
+ \end{itemize}
+\end{block}
+
+\begin{block}{\scriptsize You are free to:}
+\tiny
+ \begin{itemize}
+  \item[] \textcolor{darkgray}{\textbf{Share}} --- \textcolor{gray}{copy and redistribute the material}
+  \item[] \textcolor{darkgray}{\textbf{Adapt}} --- \textcolor{gray}{rebuild and transform the material}
+ \end{itemize}
+\end{block}
+
+\vspace{2mm}
+\begin{block}{\scriptsize Under the following conditions:}
+\tiny
+\begin{itemize}
+ \item[] \textcolor{darkgray}{\textbf{Attribution}} --- \textcolor{gray}{You must give appropriate credit, provide a link to the license, and indicate if changes were made.}
+ \item[] \textcolor{darkgray}{\textbf{NonCommercial}} --- \textcolor{gray}{You may not use this work for commercial purposes.}
+ \item[] \textcolor{darkgray}{\textbf{Share Alike}} --- \textcolor{gray}{If you remix, transform, or build upon this 
+ work, you must distribute your contributions under the same license to this one.}
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Lectures Menu}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+ \begin{block}{Slide Decks}
+  \begin{enumerate}
+   \item \textcolor{lightgray}{Introduction}
+   \item \textcolor{lightgray}{Reading files from the Web}
+   \item \textcolor{lightgray}{Basics of XML and HTML}
+   \item \textcolor{lightgray}{Parsing XML / HTML content}
+   \item \textbf{Handling JSON data}
+   \item \textcolor{lightgray}{HTTP Basics and the RCurl Package}
+   \item \textcolor{lightgray}{Getting data via Web Forms}
+   \item \textcolor{lightgray}{Getting data via Web APIs}
+  \end{enumerate}
+ \end{block}
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  \Huge{\textcolor{mandarina}{JSON Data}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Goal}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+
+\begin{block}{JSON}
+The goal of these slides is to provide an introduction for \textbf{handling JSON data in R}
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Synopsis}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+
+\begin{block}{In a nutshell}
+We'll cover the following topics:
+\begin{itemize}
+ \item JSON Basics
+ \item R packages for JSON data
+ \item Reading JSON data from the Web
+\end{itemize}
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Some References}
+
+\begin{itemize}
+ \item XML and Web Technlogies for Data Sciences with R \\
+ \low{by Deb Nolan and Duncan Temple Lang}
+ \item Introducing JSON \\
+ {\scriptsize \url{http://www.json.org/}}
+ \item R package RJSONIO \\
+ {\scriptsize \url{http://cran.r-project.org/web/packages/RJSONIO/index.html}}
+ \item R package jsonlite \\
+{\scriptsize \url{http://cran.r-project.org/web/packages/jsonlite/vignettes/json-mapping.pdf}}
+ \item R package rjson \\
+{\scriptsize \url{http://cran.r-project.org/web/packages/rjson/index.html}}
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  \Huge{\textcolor{mandarina}{JSON Basics}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Basics First}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.7\textwidth}
+
+\begin{block}{Fundamentals}
+JSON stands for \textbf{JavaScript Object Notation} \\
+and it is a format for representing data
+ \begin{itemize}
+  \item general purpose format
+  \item lightweight format
+  \item widely popular
+  \item fairly simple
+ \end{itemize}
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Basics First}
+
+\begin{block}{Why should we care?}
+When working with data from the Web, we'll inevitably find some JSON data
+\begin{itemize}
+ \item JSON can be used directly in JavaScript code for Web pages
+ \item many Web APIs provide data in JSON format
+ \item R has packages designed to handle JSON data
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  \Huge{\textcolor{mandarina}{Understanding JSON}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Understanding JSON}
+
+\begin{columns}[t]
+\begin{column}{0.3\textwidth}
+ \begin{block}{JSON Data Types}
+  \begin{itemize}
+   \item[] \highcode{null}
+   \item[] \highcode{true}
+   \item[] \highcode{false}
+   \item[] \highcode{number}
+   \item[] \highcode{string}
+  \end{itemize}
+ \end{block}
+\end{column}
+
+\begin{column}{0.4\textwidth}
+ \begin{block}{JSON Data Containers}
+  \begin{itemize}
+   \item[] square brackets \highcode{[ ]}
+   \item[] curly brackets \highcode{\{ \}}
+  \end{itemize}
+ \end{block}
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{JSON Arrays}
+
+\begin{block}{Unnamed Arrays}
+Square brackets \highcode{[ ]} are used for \textbf{ordered unnamed arrays}
+\begin{itemize}
+ \item \code{ [ 1, 2, 3, ... ] }
+ \item \code{ [ true, true, false, ... ] }
+\end{itemize}
+\end{block}
+
+\begin{block}{Named Arrays}
+Curly brackets \highcode{\{ \}} are used for \textbf{named arrays}
+\begin{itemize}
+ \item \code{ \{ "dollars" : 5, "euros" : 20, ... \} }
+ \item \code{ \{ "city" : "Berkeley", "state" : "CA", ... \} }
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{JSON Arrays}
+
+Containers can be nested
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+\begin{block}{Example A}
+{\footnotesize
+\begin{verbatim}
+{
+    "name": ["X", "Y", "Z"],
+    "grams": [300, 200, 500], 
+    "qty": [4, 5, null],
+    "new": [true, false, true],
+}
+\end{verbatim}
+}
+\end{block}
+\end{column}
+
+\begin{column}{0.5\textwidth}
+\begin{block}{Example B}
+{\footnotesize
+\begin{verbatim}
+[
+    { "name": "X", 
+      "grams": 300,
+      "qty": 4,
+      "new": true },
+    { "name": "Y",
+      "grams": 200,
+      "qty": 5,
+      "new": false },
+    { "name": "Z",
+      "grams": 500, 
+      "qty": null,
+      "new": true}
+]
+\end{verbatim}
+}
+\end{block}
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Data Table Toy Example}
+
+\begin{center}
+\textcolor{turquoise}{Imagine we have some data}
+
+\bigskip
+\begin{tabular}{l l l l l}
+  \hline
+  Name & Gender & Homeland & Born & Jedi \\
+  \hline
+  Anakin & male & Tatooine & 41.9BBY & yes \\  
+  Amidala & female & Naboo & 46BBY & no \\
+  Luke & male & Tatooine & 19BBY & yes \\
+  Leia & female & Alderaan & 19BBY & no \\
+  Obi-Wan & male & Stewjon & 57BBY & yes \\
+  Han & male & Corellia & 29BBY & no \\
+  Palpatine & male & Naboo & 82BBY & no \\
+  R2-D2 & unknown & Naboo & 33BBY & no \\
+  \hline
+ \end{tabular}
+\end{center}
+
+There are several ways to represent this data in JSON format
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{One way to represent data}
+
+{\footnotesize
+\begin{verbatim}
+    [
+        {
+         "Name": "Anakin",
+         "Gender": "male", 
+         "Homeworld": "Tatooine",
+         "Born": "41.9BBY",
+         "Jedi": "yes"
+        },
+        ...
+        {
+         "Name": "R2-D2",
+         "Gender": "unknown",
+         "Homeworld": "Naboo",
+         "Born": "33BBY",
+         "Jedi": "no"
+        },
+    ]
+\end{verbatim}
+}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Another way to represent data}
+
+{\footnotesize
+\begin{verbatim}
+{
+  "Name": [ "Anakin", "Amidala", "Luke", ... , "R2-D2" ],
+  "Gender": [ "male", "female", "male", ... , "unknown" ],
+  "Homeworld": [ "Tatooine", "Naboo", "Tatooine", ... , "Naboo" ],
+  "Born": [ "41.9BBY", "46BBY", "19BBY", ... , "33BBY" ],
+  "Jedi": [ "yes", "no", "yes", ... , "no" ] 
+}
+
+\end{verbatim}
+}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  \Huge{\textcolor{mandarina}{JSON R packages}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{R packages}
+
+\begin{block}{R packages for JSON}
+R has 3 packages for working with JSON data
+
+\begin{itemize}
+ \item \highcode{"RJSONIO"} by Duncan Temple Lang
+ \item \highcode{"rjson"} by Alex Couture-Beil
+ \item \highcode{"jsonlite"} by Jeroen Ooms, Duncan Temple Lang, Jonathan Wallace
+\end{itemize}
+\end{block}
+
+All packages provide 2 main functions ---\highcode{toJSON()} and \highcode{fromJSON()}--- that allow conversion \textbf{to} and \textbf{from} data in JSON format, respectively. \\
+\low{We'll focus on the functions from \code{"RJSONIO"}}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{R package RJSONIO}
+
+\begin{block}{R package \code{"RJSONIO"}}
+If you don't have \code{"RJSONIO"} you'll have to install it:
+<<rjsonio, eval=FALSE, message=FALSE, size="small">>=
+# install RJSONIO
+install.packages("RJSONIO", dependencies = TRUE)
+@
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{R package RJSONIO}
+
+\begin{block}{Main functions}
+There are 2 primary functions in \code{"RJSONIO"}
+\begin{itemize}
+ \item \highcode{toJSON()} converts an R object to a string in JSON
+ \item \highcode{fromJSON()} converts JSON content to R objects
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{\code{toJSON()}}
+
+\begin{block}{Function \code{toJSON()}}
+\begin{verbatim}
+toJSON(x, container = isContainer(x, asIs, .level), 
+       collapse = "\n", ...)
+\end{verbatim}
+
+\begin{itemize}
+ \item \highcode{x} the R object to be converted to JSON format
+ \item \highcode{container} whether to treat the object as a vector/container or a scalar 
+ \item \highcode{collapse} string used as separator when combining the individual lines of the generated JSON content
+ \item \highcode{...} additional arguments controlling the JSON formatting
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{\code{fromJSON()}}
+
+\begin{block}{Function \code{fromJSON()}}
+\begin{verbatim}
+fromJSON(content, handler = NULL, default.size = 100,
+         depth = 150L, allowComments = TRUE, ...)
+\end{verbatim}
+
+\begin{itemize}
+ \item \highcode{content} the JSON content: either a file name or a character string
+ \item \highcode{handler} R object responsible for processing each individual token/element
+ \item \highcode{deafult.size} size to use for arrays and objects in an effort to avoid reallocating each time we add a new element.
+ \item \highcode{depth} maximum number of nested JSON levels
+ \item \highcode{allowComments} whether to allow C-style comments within the JSON content
+ \item \highcode{...} additional parameters
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Data Table Toy Example}
+
+\begin{center}
+\textcolor{turquoise}{Imagine we have some tabular data}
+\end{center}
+
+\begin{center}
+ \begin{tabular}{l l l l l}
+  \hline
+  Name & Gender & Homeland & Born & Jedi \\
+  \hline
+  Anakin & male & Tatooine & 41.9BBY & yes \\  
+  Amidala & female & Naboo & 46BBY & no \\
+  Luke & male & Tatooine & 19BBY & yes \\
+  Leia & female & Alderaan & 19BBY & no \\
+  Obi-Wan & male & Stewjon & 57BBY & yes \\
+  Han & male & Corellia & 29BBY & no \\
+  Palpatine & male & Naboo & 82BBY & no \\
+  R2-D2 & unknown & Naboo & 33BBY & no \\
+  \hline
+ \end{tabular}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{R Data Frame}
+
+<<starwars, tidy=FALSE>>=
+# toy data
+sw_data = rbind(
+  c("Anakin", "male", "Tatooine", "41.9BBY",  "yes"),  
+  c("Amidala", "female", "Naboo", "46BBY", "no"),
+  c("Luke", "male", "Tatooine", "19BBY", "yes"),
+  c("Leia", "female", "Alderaan", "19BBY", "no"),
+  c("Obi-Wan",  "male", "Stewjon", "57BBY", "yes"),
+  c("Han", "male", "Corellia", "29BBY", "no"),
+  c("Palpatine", "male", "Naboo", "82BBY", "no"),
+  c("R2-D2", "unknown", "Naboo", "33BBY", "no"))
+
+# convert to data.frame and add column names
+swdf = data.frame(sw_data)
+names(swdf) = c("Name", "Gender", "Homeworld", "Born", "Jedi")
+swdf
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{From R to JSON}
+
+<<R2json, tidy=FALSE>>=
+# load RJSONIO
+library(RJSONIO)
+
+# convert R data.frame to JSON
+sw_json = toJSON(swdf)
+
+# what class?
+class(sw_json)
+
+# display JSON format
+cat(sw_json)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{From JSON to R}
+
+<<json2R, tidy=FALSE>>=
+# convert JSON string to R list
+sw_R = fromJSON(sw_json)
+
+# what class?
+class(sw_R)
+
+# display JSON format
+sw_R
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  \Huge{\textcolor{mandarina}{Reading JSON Data}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{JSON Data from the Web}
+
+\begin{block}{How do we read JSON data from the Web?}
+We read JSON data in several ways. One way is to pass the url directly to \code{fromJSON()}. Another way is by passing \code{fromJSON()} the name of the file with the JSON content as a single string.
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{File: miserables.js}
+
+We'll read the \textit{miserables} dataset from: \\
+\url{http://mbostock.github.io/protovis/ex/miserables.js}
+
+\begin{center}
+\includegraphics[width=8cm]{images/miserables_js.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Reading Issues}
+
+\begin{block}{Houston we have a problem ...}
+The data is in a file that contains several javascript comments and some other javascript notation.
+
+\bigskip
+Unfortunately, we cannot use any of the \code{fromJSON()} functions directly on this type of content.
+
+\bigskip
+Instead, we need to read the content as text, get rid of the comments, and change some characters before using \code{fromJSON()}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading \code{miserables.js}}
+
+<<read_miserables, tidy=FALSE, eval=FALSE>>=
+# load RJSONIO and jsonlite
+library(RJSONIO)
+library(jsonlite)
+
+# url with JSON content
+miser = "http://mbostock.github.io/protovis/ex/miserables.js"
+
+# import content as text (character vector)
+miserables = readLines(miser)
+
+# eliminate first 11 lines (containing comments)
+miserables = miserables[-c(1:11)]
+@
+
+<<my_miserables, echo=FALSE, message=FALSE>>=
+library(RJSONIO)
+library(jsonlite)
+miser = "/Users/Gaston/Documents/Data_Technologies/data/miserables.txt"
+miserables = readLines(miser)
+miserables = miserables[-c(1:11)]
+@
+
+Now check the first and the last lines:
+
+<<miserables_first_last>>=
+# first line
+miserables[1]
+# last line
+miserables[length(miserables)]
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Preparing JSON content}
+
+We need to modify the first and last lines so they don't contain non-JSON javascript notation
+
+<<non_js_content>>=
+# open curly bracket in first line
+miserables[1] = "{"
+
+# closing curly bracket in last line
+miserables[length(miserables)] = "}"
+@
+
+Now we must concatenate all the content into a single string:
+
+<<miserables_collapsing>>=
+# JSON content in one single string
+miserables_str = paste(miserables, collapse = "")
+@
+
+Once we have the JSON content in the proper shape, we can parse it with \highcode{fromJSON()}.
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Parsing JSON content}
+
+\highcode{fromJSON()} from package \code{"RJSONIO"}:
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<miserables_rjsonio>>=
+# fromJSON() in package RJSONIO
+mis1 = RJSONIO::fromJSON(miserables_str)
+
+# class
+class(mis1)
+# how many elements
+length(mis1)
+# names
+names(mis1)
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<mis1>>=
+# class of each element
+lapply(mis1, class)
+# how many elements in each list component
+lapply(mis1, length)
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Parsing JSON content}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<mis1_group_head>>=
+# take a peek at nodes
+head(mis1[[1]], n = 3)
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<mis1_nodes_head>>=
+# take a peek at links
+head(mis1[[2]], n = 3)
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Parsing Differences}
+
+\begin{block}{\code{"RJSONIO"} -vs- \code{"jsonlite"}}
+The package \code{"jsonlite"} is a fork of \code{"RJSONIO"}. However, \code{"jsonlite"} implements a smarter mapping between JSON data and R classes.
+
+\bigskip
+From the previous example, we saw that \code{"jsonlite"} returns a list of data frames instead of the list of lists returned by \code{"RJSONIO"}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\end{document}
