@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+<!DOCTYPE eSearchResult PUBLIC "-//NLM//DTD esearch 20060628//EN" "http://eutils.ncbi.nlm.nih.gov/eutils/dtd/20060628/esearch.dtd">
+<eSearchResult><Count>103</Count><RetMax>20</RetMax><RetStart>0</RetStart><QueryKey>1</QueryKey><WebEnv>NCID_1_282865897_130.14.18.34_9001_1399488846_694838780</WebEnv><IdList>
+<Id>23959643</Id>
+<Id>23730202</Id>
+<Id>23520917</Id>
+<Id>23281708</Id>
+<Id>23281599</Id>
+<Id>23266811</Id>
+<Id>23261826</Id>
+<Id>23260131</Id>
+<Id>23251346</Id>
+<Id>23235118</Id>
+<Id>23230266</Id>
+<Id>23166509</Id>
+<Id>23153121</Id>
+<Id>23151206</Id>
+<Id>23148531</Id>
+<Id>23141859</Id>
+<Id>23115822</Id>
+<Id>23112225</Id>
+<Id>23102215</Id>
+<Id>23086744</Id>
+</IdList><TranslationSet/><TranslationStack>   <TermSet>    <Term>human genome[title]</Term>    <Field>title</Field>    <Count>2906</Count>    <Explode>N</Explode>   </TermSet>   <TermSet>    <Term>2012[pdat]</Term>    <Field>pdat</Field>    <Count>1067564</Count>    <Explode>N</Explode>   </TermSet>   <OP>AND</OP>  </TranslationStack><QueryTranslation>human genome[title] AND 2012[pdat]</QueryTranslation></eSearchResult>
