@@ -1,0 +1,1560 @@
+\documentclass{beamer}
+
+% load packages
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{upquote}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{color}
+\usepackage{lmodern}
+
+\input{../header.tex}
+
+\title[Getting data from the web with R]{\LARGE Getting Data from the Web with R} 
+\subtitle[Web Data in R]{\large Part 4: Parsing XML/HTML Content}
+\author[gastonsanchez.com]{
+ \textcolor{gray}{\textbf{G}aston \textbf{S}anchez}
+}
+\institute[]{\scriptsize \textcolor{lightgray}{April-May 2014}}
+\date[CC BY-SA-NC 4.0]{
+ \textcolor{lightgray}{\tiny{Content licensed under 
+ \href{http://creativecommons.org/licenses/by-nc-sa/4.0/}{CC BY-NC-SA 4.0}}}
+}
+
+
+\begin{document}
+
+<<setup, include=FALSE>>=
+# smaller font size for chunks
+opts_chunk$set(size = 'tiny')
+thm <- knit_theme$get("bclear")
+knit_theme$set(thm)
+options(width=78)
+@
+
+
+%--- the titlepage frame -------------------------%
+
+\begin{frame}[plain]
+ \titlepage
+\end{frame}
+
+%------------------------------------------------
+
+{ % all template changes are local to this group.
+    \setbeamertemplate{navigation symbols}{}
+    \begin{frame}[plain]
+        \begin{tikzpicture}[remember picture,overlay]
+            \node[at=(current page.center)] {
+                \includegraphics[width=\paperwidth]{images/xmlparsing_cover.png}
+            };
+        \end{tikzpicture}
+     \end{frame}
+}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Readme}
+
+\begin{block}{\scriptsize License:}
+\tiny
+ \begin{itemize}
+  \item[] Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License \\ 
+  \url{http://creativecommons.org/licenses/by-nc-sa/4.0/}{}
+ \end{itemize}
+\end{block}
+
+\begin{block}{\scriptsize You are free to:}
+\tiny
+ \begin{itemize}
+  \item[] \textcolor{darkgray}{\textbf{Share}} --- \textcolor{gray}{copy and redistribute the material}
+  \item[] \textcolor{darkgray}{\textbf{Adapt}} --- \textcolor{gray}{rebuild and transform the material}
+ \end{itemize}
+\end{block}
+
+\vspace{2mm}
+\begin{block}{\scriptsize Under the following conditions:}
+\tiny
+\begin{itemize}
+ \item[] \textcolor{darkgray}{\textbf{Attribution}} --- \textcolor{gray}{You must give appropriate credit, provide a link to the license, and indicate if changes were made.}
+ \item[] \textcolor{darkgray}{\textbf{NonCommercial}} --- \textcolor{gray}{You may not use this work for commercial purposes.}
+ \item[] \textcolor{darkgray}{\textbf{Share Alike}} --- \textcolor{gray}{If you remix, transform, or build upon this 
+ work, you must distribute your contributions under the same license to this one.}
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Lectures Menu}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+ \begin{block}{Slide Decks}
+  \begin{enumerate}
+   \item \textcolor{lightgray}{Introduction}
+   \item \textcolor{lightgray}{Reading files from the Web}
+   \item \textcolor{lightgray}{Basics of XML and HTML}
+   \item \textbf{Parsing XML / HTML content}
+   \item \textcolor{lightgray}{Handling JSON data}
+   \item \textcolor{lightgray}{HTTP Basics and the RCurl Package}   
+   \item \textcolor{lightgray}{Getting data via web forms}
+   \item \textcolor{lightgray}{Getting data via web services}
+   %\item \textcolor{lightgray}{Web Scraping Case Study}
+  \end{enumerate}
+ \end{block}
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  \Huge{\textcolor{mandarina}{Parsing XML \\ and HTML Content}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Goal}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+
+\begin{block}{Parsing XML / HTML docs}
+The goal of these slides is to describe \textbf{how we can parse XML / HTML content} with the R package \highcode{"XML"}
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Synopsis}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+
+\begin{block}{In a nutshell}
+We'll cover a variety of situations you most likely will find yourself dealing with:
+\begin{itemize}
+ \item R package XML
+ \item Navigating the xml tree structure
+ \item Main functions in package XML
+ \item XPath
+\end{itemize}
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Some References}
+
+\begin{itemize}
+ \item An Introduction to the XML Package for R \\
+{\scriptsize \url{http://www.omegahat.org/RSXML/Tour.pdf}}
+ \item A Short Introduction to the XML package for R \\
+{\scriptsize \url{http://www.omegahat.org/RSXML/shortIntro.pdf}}
+ \item R and Splus XML Parsers \\
+ {\scriptsize \url{http://www.omegahat.org/RSXML/Overview.html}}
+ \item XML and Web Technlogies for Data Sciences with R \\
+ \low{by Deb Nolan and Duncan Temple Lang}
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Parsing}
+
+\begin{quotation}
+``A parser is a software component that takes input data (frequently text) and builds a data structure ---often some kind of parse tree, abstract syntax tree or other hierarchical structure--- giving a structural representation of the input, checking for correct syntax in the process''
+\end{quotation}
+
+{\footnotesize 
+\hspace{8mm} \url{http://en.wikipedia.org/wiki/Parsing\#Parser} \\
+}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Parsing XML and HTML Content}
+
+\begin{block}{Parsing XML and HTML?}
+Getting data from the web often involves reading and processing content from xml and html documents. This is known as parsing. 
+
+\bigskip
+Luckily for us there's the R package \highcode{"XML"} \low{(by Duncan Temple Lang)} that allows us to parse such types of documents.
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  {\Huge \textcolor{mandarina}{R package \code{"XML"}}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+{ % all template changes are local to this group.
+    \setbeamertemplate{navigation symbols}{}
+    \begin{frame}[plain]
+        \begin{tikzpicture}[remember picture,overlay]
+            \node[at=(current page.center)] {
+                \includegraphics[width=\paperwidth]{images/xml_package.png}
+            };
+        \end{tikzpicture}
+     \end{frame}
+}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{R Package XML}
+
+The package \highcode{"XML"} is designed for 2 major purposes
+\begin{enumerate}
+ \item parsing xml / html content
+ \item writing xml / html content
+\end{enumerate}
+
+\bigskip
+
+\low{We won't cover the functions and utilities that have to do with writing xml / html content}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{What can we do with "XML"?}
+
+We'll cover 4 major types of tasks that we can perform with \highcode{"XML"}
+\begin{enumerate}
+ \item parsing (ie \textit{reading}) xml / html content
+ \item obtaining descriptive information about parsed contents
+ \item navigating the tree structure \low{(ie accessing its components)}
+ \item querying and extracting data from parsed contents
+\end{enumerate}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Using \code{"XML"}}
+
+If you don't have \code{"XML"} you'll need to install it first
+<<xml_install, eval=FALSE>>=
+# installing xml
+install.packages("xml", dependencies = TRUE)
+@
+
+Once installed it can be loaded
+<<xml_load, message=FALSE>>=
+# load XML
+library(XML)
+@
+
+More info about \code{"XML"} at: \\
+{\scriptsize \url{http://www.omegahat.org/RSXML}}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  {\Huge \textcolor{mandarina}{Parsing Functions}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Function \code{xmlParse()}}
+
+\begin{block}{Function \code{xmlParse()}}
+\begin{itemize}
+\item \code{"XML"} comes with the \textit{almighty} parser function \highcode{xmlParse()}
+ \item the main input for \highcode{xmlParse()} is a file: either a local file, a complete URL or a text string
+ \begin{itemize}
+ \item[ex1:] \code{xmlParse("Documents/file.xml")}
+ \item[ex2:] \code{xmlParse("http://www.xyz.com/some\_file.xml")}
+ \item[ex3:] \code{xmlParse(xml\_string, asText=TRUE)}
+ \end{itemize}
+ \item the rest of the 20+ parameters are optional, and provide options to control the parsing procedure
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{\code{xmlParse()} default behavior}
+
+\begin{block}{What does \code{xmlParse()} do?}
+First let's talk about the \textbf{default behavior} of \highcode{xmlParse()} 
+\begin{itemize}
+ \item it is a DOM parser: it reads an XML document into a hierarchical structure representation
+ \item it builds an XML tree as a native C-level data structure \\
+ \low{(not an R data structure)}
+ \item it returns an object of class \highcode{"XMLInternalDocument"}
+ \item can read content from compressed files without us needing to explicitly uncompress the file
+ \item it does NOT handle \code{HTTPS} \low{(secured HTTP)}
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{About \code{xmlParse()} (con't)}
+
+\begin{block}{Default behavior}
+Simple usage of \highcode{xmlParse()} on an XML document:
+<<xmlparse_default, eval=FALSE>>=
+# parsing an xml document
+doc1 = xmlParse("http://www.xmlfiles.com/examples/plant_catalog.xml")
+@
+
+\highcode{xmlParse()} returns an object of class \highcode{"XMLInternalDocument"} which is a C-level internal data structure
+
+<<xmlparse_class, echo=c(3,4)>>=
+# parsing an xml document
+doc1 = xmlParse("/Users/Gaston/Documents/Data_Technologies/data/plant_catalog.xml")
+# class 
+class(doc1)
+@
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{About \code{xmlParse()} (con't)}
+
+\begin{block}{Argument \code{useInternalNodes = FALSE}}
+Instead of parsing content as an internal C-level structure, we can parse it into an R structure by specifying the parameter \highcode{useInternalNodes = FALSE}
+
+<<xmlparse_useintnodes, eval=FALSE, tidy=FALSE>>=
+# parsing an xml document into an R structure
+doc2 = xmlParse("http://www.xmlfiles.com/examples/plant_catalog.xml",
+                useInternalNodes = FALSE)
+@
+
+the output is of class \highcode{"XMLDocument"} and is implemented as a hierarchy of lists
+
+<<xmlparse_Rlist, echo=c(3:5)>>=
+# parsing an xml document
+doc2 = xmlParse("/Users/Gaston/Documents/Data_Technologies/data/plant_catalog.xml", useInternalNodes = FALSE)
+# class 
+class(doc2)
+is.list(doc2)
+@
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{About \code{xmlTreeParse()}}
+
+\begin{block}{Argument \code{useInternalNodes = FALSE}}
+\code{"XML"} provides the function \highcode{xmlTreeParse()} as a convenient synonym for \code{xmlParse(file, useInternalNodes = FALSE)}
+
+<<xmltreeparse, eval=FALSE, tidy=FALSE>>=
+# parse an xml document into an R structure
+doc3 = xmlTreeParse("http://www.xmlfiles.com/examples/plant_catalog.xml")
+@
+
+As expected, the output is of class \highcode{"XMLDocument"}
+
+<<xmltreeparse_Rlist, echo=c(3:5)>>=
+# parsing an xml document
+doc3 = xmlTreeParse("/Users/Gaston/Documents/Data_Technologies/data/plant_catalog.xml")
+# class 
+class(doc3)
+identical(doc2, doc3)
+@
+
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{HTML Content}
+
+\begin{block}{Parsing HTML content}
+In theory, we could use \highcode{xmlParse()} with its default settings to parse HTML documents. 
+
+\bigskip
+However \code{xmlParse()} ---with its default behavior--- will not work properly when HTML documents are not well-formed:
+\begin{itemize}
+ \item no xml declaration
+ \item no DOCTYPE
+ \item no closure of tags
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{\code{xmlParse()} and HTML Content}
+
+\begin{block}{Argument \code{isHTML = TRUE}}
+One option to parse HTML documents is by using \code{xmlParse()} with the argument \highcode{isHTML = TRUE}
+
+<<xmlparse_html, eval=FALSE>>=
+# parsing an html document with 'xmlParse()'
+doc4 = xmlParse("http://www.r-project.org/mail.html",
+                isHTML = TRUE)
+@
+
+the output is of class \highcode{"HTMLInternalDocument"}
+
+<<myxmlparse_html, echo=FALSE, results='hide'>>=
+# parsing an html document
+doc4 = xmlParse("/Users/Gaston/Documents/Data_Technologies/data/mailing_lists.html", isHTML = TRUE)
+@
+
+<<xmlparse_html_mails>>=
+# class 
+class(doc4)
+@
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{\code{htmlParse()} and HTML Content}
+
+\begin{block}{Function \code{htmlParse()}}
+Another option is to use the function \highcode{htmlParse()} which is equivalent to \code{xmlParse(file, isHTML = TRUE)}
+
+<<htmlparse_html, eval=FALSE>>=
+# parsing an html document with 'htmlParse()'
+doc5 = htmlParse("http://www.r-project.org/mail.html")
+@
+
+again, the output is of class \highcode{"HTMLInternalDocument"}
+
+<<htmlparse_mails, echo=c(3,4)>>=
+# parsing an html document
+doc5 = htmlParse("/Users/Gaston/Documents/Data_Technologies/data/mailing_lists.html")
+# class 
+class(doc5)
+@
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Function \code{htmlTreeParse()}}
+
+\begin{block}{Function \code{htmlTreeParse()}}
+To parse content into an R structure we have to use \highcode{htmlTreeParse()} which is equivalent to \code{htmlParse(file, useInternalNodes = FALSE)}
+
+<<htmltreeparse_html, eval=FALSE>>=
+# parsing an html document into an  R structure
+doc6 = htmlTreeParse("http://www.r-project.org/mail.html")
+@
+
+in this case the output is of class \highcode{"XMLDocumentContent"}
+
+<<htmltreeparse_mails, echo=c(3,4)>>=
+# parsing an html document
+doc6 = htmlTreeParse("/Users/Gaston/Documents/Data_Technologies/data/mailing_lists.html")
+# class 
+class(doc6)
+@
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{HTML Content}
+
+\begin{block}{About parsing HTML documents}
+\begin{itemize}
+ \item \code{xmlParse()} can do the job but only on well-formed HTML
+ \item it is better to be conservative and use the argument \highcode{isHTML = TRUE}, which is equivalent to using \code{htmlParse()}
+ \item we can use \highcode{htmlParse()} or \highcode{htmlTreeParse()} which try to correct not well-formed docs by using heuristics that will take care of the missing elements
+ \item in a worst-case scenario we can use \highcode{tidyHTML()} from the R package \code{"RTidyHTML"}, and then pass the result to \code{htmlParse()}
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Parsing Functions Summary}
+
+\begin{block}{\code{xmlParse(file)}}
+\begin{itemize}
+ \item main parsing function
+ \item returns class \code{"XMLInternalDocument"} \low{(C-level structure)}
+\end{itemize}
+\end{block}
+
+\begin{block}{\code{xmlTreeParse(file)}}
+\begin{itemize}
+ \item returns class \code{"XMLDocument"} \low{(R data structure)}
+ \item equivalent to \code{xmlParse(file, useInternalNodes = FALSE)}
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Parsing Functions Summary}
+
+\begin{block}{\code{htmlParse(file)}}
+\begin{itemize}
+ \item especially suited for parsing HTML content
+ \item returns class \code{"HTMLInternalDocument"} \low{(C-level structure)}
+ \item equivalent to \code{xmlParse(file, isHTML = TRUE)}
+\end{itemize}
+\end{block}
+
+\begin{block}{\code{htmlTreeParse(file)}}
+\begin{itemize}
+ \item especially suited for parsing HTML content
+ \item returns class \code{"XMLDocumentContent"} \low{(R data structure)}
+ \item equivalent to
+ \begin{itemize}
+  \item \code{xmlParse(file, isHTML = TRUE, useInternalNodes = FALSE)}
+  \item \code{htmlParse(file, useInternalNodes = FALSE)}
+ \end{itemize}
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  {\Huge \textcolor{mandarina}{Working with \\ Parsed Documents}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Parsed Documents}
+
+\begin{block}{\code{xmlRoot()} and \code{xmlChildren()}}
+Having parsed an XML / HTML document, we can use 2 main functions to start working on the tree structure:
+\begin{itemize}
+ \item \highcode{xmlRoot()} gets access to the root node and its elements 
+ \item \highcode{xmlChildren()} gets access to the child elements of a given node
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Conceptual Diagram}
+
+\begin{center}
+\includegraphics[width=11cm]{images/xml_tree_navigate.pdf}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Some Additional Functions}
+
+\begin{center}
+\textcolor{turquoise}{Functions for a given node}
+\end{center}
+
+\begin{center}
+ \begin{tabular}{l l}
+  \hline
+  Function & Description \\
+  \hline
+  \code{xmlName()} & name of the node \\
+  \code{xmlSize()} & number of subnodes \\
+  \code{xmlAttrs()} & named character vector of all attributes \\
+  \code{xmlGetAttr()} & value of a single attribute \\
+  \code{xmlValue()} & contents of a leaf node \\
+  \code{xmlParent()} & name of parent node \\
+  \code{xmlAncestors()} & name of ancestor nodes \\
+  \code{getSibling()} & siblings to the right or to the left \\
+  \code{xmlNamespace()} & the namespace (if there's one) \\  
+  \hline
+ \end{tabular}
+\end{center}
+
+{\scriptsize \low{The applicability of the functions depends on the class of objects we are working on}}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Toy Example: Movies XML}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<xml_movie_string, tidy=FALSE>>=
+# define some xml content
+xml_string = c(
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<movies>',
+  '<movie mins="126" lang="eng">',
+  '<title>Good Will Hunting</title>',
+  '<director>',
+  '<first_name>Gus</first_name>',
+  '<last_name>Van Sant</last_name>',
+  '</director>',
+  '<year>1998</year>',
+  '<genre>drama</genre>',
+  '</movie>',
+  '<movie mins="106" lang="spa">',
+  '<title>Y tu mama tambien</title>',
+  '<director>',
+  '<first_name>Alfonso</first_name>',
+  '<last_name>Cuaron</last_name>',
+  '</director>',
+  '<year>2001</year>',
+  '<genre>drama</genre>',
+  '</movie>',
+  '</movies>')
+
+# parse xml content
+movies_xml = xmlParse(xml_string, asText = TRUE)
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<check_movies_xml>>=
+# check movies_xml
+movies_xml
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Movies XML: Root Node}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<xml_movies_info, tidy=FALSE>>=
+# examine class
+# (movies_xml is a C-level object)
+class(movies_xml)
+
+# get root node
+root = xmlRoot(movies_xml)
+
+# examine class
+class(root)
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<movie_root_node>>=
+# display root node
+root
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Movies XML: movie children}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<movie_node_children, tidy=FALSE>>=
+# children of root node
+movie_child = xmlChildren(root)
+
+movie_child
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<movie_children_examine>>=
+# first movie
+goodwill = movie_child[[1]]
+goodwill
+# second movie
+tumama = movie_child[[2]]
+tumama
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Movies XML: movie children}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<movie_good_will, tidy=FALSE>>=
+# node name
+xmlName(goodwill)
+# number of children
+xmlSize(goodwill)
+# node attributes
+xmlAttrs(goodwill)
+# get specific attribute value
+xmlGetAttr(goodwill, name = 'lang')
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<movie_tumama>>=
+# node name
+xmlName(tumama)
+# number of children
+xmlSize(tumama)
+# node attributes
+xmlAttrs(tumama)
+# get specific attribute value
+xmlGetAttr(tumama, name = 'lang')
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Movies XML: movie Good Will Hunting}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<goodwill_children, tidy=FALSE>>=
+# node content (as character string)
+xmlValue(goodwill)
+# child nodes of goodwill node
+xmlChildren(goodwill)
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<goodwill_director>>=
+# director nodes of goodwill node
+gusvan = xmlChildren(goodwill)[[2]]
+gusvan
+# parent
+xmlParent(gusvan)
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Movies XML: movie Good Will Hunting}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<gusvan_children>>=
+# director children
+xmlChildren(gusvan)
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<goodwill_sibling, tidy=FALSE>>=
+# sibling of goodwill node
+getSibling(goodwill)
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  {\Huge \textcolor{mandarina}{Looping Over Nodes}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Looping Over Nodes}
+
+\begin{block}{Looping over nodes}
+Extracting data from an XML / HTML document involves applying a given function to a subset of nodes. This means iterating over such subset.
+
+\bigskip
+There are various ways to loop over a subset of nodes:
+\begin{itemize}
+ \item the most basic approach is with \highcode{sapply()} or \highcode{lapply()}
+ \item anoter way is by using the ad-hoc functions \highcode{xmlApply()} and \highcode{xmlSApply()}, which are simple wrappers for the \code{lapply()} and \code{sapply()} functions. 
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Looping Over Nodes}
+
+Some iteration examples with \highcode{sapply()}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<sapply1>>=
+# length
+sapply(movie_child, length)
+# names in child nodes
+sapply(movie_child, names)
+sapply(movie_child, xmlSize)
+
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<sapply2>>=
+# attributes of root child nodes
+sapply(movie_child, xmlAttrs)
+# names in child nodes
+sapply(movie_child, xmlValue)
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Looping Over Nodes}
+
+\highcode{xmlApply()} and \highcode{xmlSApply()} operate on the sub-nodes of the XML node:
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<xmlSApply1>>=
+# names in child nodes
+xmlSApply(root, names)
+# size of movie children
+xmlSApply(root, xmlSize)
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<xmlSApply2>>=
+# attributes of root child nodes
+xmlSApply(root, xmlAttrs)
+# names in child nodes
+xmlSApply(root, xmlValue)
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Looping Over Nodes}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<xmlSApply3>>=
+# length of nodes in movie 1
+xmlSApply(root[[1]], length)
+# size in child nodes in movie 1
+xmlSApply(root[[1]], xmlSize)
+# attribute values of nodes in movie 1
+xmlSApply(root[[1]], xmlValue)
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<xmlSApply4>>=
+# length of nodes in movie 2
+xmlSApply(root[[2]], length)
+# size in child nodes in movie 2
+xmlSApply(root[[2]], xmlSize)
+# attribute values of nodes in movie 2
+xmlSApply(root[[2]], xmlValue)
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  {\Huge \textcolor{mandarina}{XPath Language}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{XPath}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+
+\begin{block}{Querying Trees}
+The real parsing power comes from the ability to \textbf{locate nodes and extract information from them}. For this, we need to be able to perform queries on the parsed content.
+\end{block}
+
+\begin{block}{XPath}
+The solution is provided by \textbf{XPath}, which is a language to navigate through elements and attributes in an XML/HTML document
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{XPath}
+
+\begin{block}{XPath}
+\begin{itemize}
+ \item is a language for finding information in an XML document
+ \item uses path expressions to select nodes or node-sets in an XML document
+ \item works by identifying patterns to match data or content
+ \item includes over 100 built-in functions
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{About XPath}
+
+\begin{block}{XPath Syntax}
+XPath uses \textbf{path expressions} to select nodes in an XML document. It has a computational model to identify sets of nodes (node-sets)
+\end{block}
+
+\begin{block}{XPath Syntax}
+We can specify paths through the tree structure:
+\begin{itemize}
+ \item based on node names
+ \item based on node content
+ \item based on a node's relationship to other nodes
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{About XPath}
+
+\begin{block}{XPath Syntax}
+The key concept is knowing how to write XPath expressions. XPath expressions have a syntax similar to the way files are located in a hierarchy of directories/folders in a computer file system. For instance:
+\end{block}
+
+\highcode{/movies/movie[1]} 
+
+\vspace{3mm}
+is the XPath expression to locate the first \highcode{movie} element that is the child of the \highcode{movies} element
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Selecting Nodes}
+
+\begin{block}{XPath Syntax}
+The main path expressions (ie symbols) are:
+\end{block}
+
+\begin{center}
+ \begin{tabular}{l l}
+  \hline
+  Symbol & Description \\
+  \hline
+  \code{/} & selects from the root node \\
+  \code{//} & selects nodes anywhere \\
+  \code{.} & selects the current node \\
+  \code{..} & Selects the parent of the current node \\
+  \code{@} & Selects attributes \\
+  \code{[]} & Square brackets to indicate attributes \\
+  \hline
+ \end{tabular}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Selecting Unknown Nodes}
+
+\begin{block}{XPath wildcards for unknown nodes}
+XPath wildcards can be used to select unknown XML elements
+\end{block}
+
+\begin{center}
+ \begin{tabular}{l l}
+  \hline
+  Symbol & Description \\
+  \hline
+  \code{*} & matches any element node \\
+  \code{@*} & matches any attribute node \\
+  \code{node()} & matches any node of any kind \\
+  \hline
+ \end{tabular}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Movies Tree Structure}
+
+\begin{center}
+\includegraphics[width=10cm]{images/xpath_tree.pdf}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{XPath: movie nodes}
+
+\begin{center}
+\includegraphics[width=10cm]{images/xpath_movie.pdf}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{XPath: movie title nodes}
+
+\begin{center}
+\includegraphics[width=10cm]{images/xpath_title.pdf}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{XPath: movie director's first name nodes}
+
+\begin{center}
+\includegraphics[width=10cm]{images/xpath_firstname.pdf}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{XPath: movie director nodes}
+
+\begin{center}
+\includegraphics[width=10cm]{images/xpath_director.pdf}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{XPath: last name nodes}
+
+\begin{center}
+\includegraphics[width=10cm]{images/xpath_lastname.pdf}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{XPath: itle node of movie in Spanish}
+
+\begin{center}
+\includegraphics[width=10cm]{images/xpath_ytmt.pdf}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  {\Huge \textcolor{mandarina}{Querying Parsed Documents}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{XPath in "XML"}
+
+\begin{block}{XPath in \code{"XML"}}
+To work with XPath expressions using the \code{"XML"} package, we have the auxiliary function \highcode{getNodeSet()} that accepts XPath expressions in order to 
+select node-sets. Its main usage is:
+\begin{verbatim}
+    getNodeSet(doc, path)
+\end{verbatim}
+\end{block}
+
+where \highcode{doc} is an object of class \code{"XMLInternalDocument"} and \highcode{path} is a string giving the XPath expression to be evaluated
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{XML Movies Example}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<xml_movie_string, tidy=FALSE>>=
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<check_movies_xml>>=
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting Nodes}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<node_set_movie1, tidy=FALSE>>=
+# set of movie nodes
+getNodeSet(movies_xml, "/movies/movie")
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<node_set_movie2, tidy=FALSE>>=
+# equivalently
+getNodeSet(movies_xml, "//movie")
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting Nodes}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<node_set_title, tidy=FALSE>>=
+# set of title nodes
+getNodeSet(movies_xml, "//title")
+# set of year nodes
+getNodeSet(movies_xml, "//year")
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<node_set_director, tidy=FALSE>>=
+# set of director nodes
+getNodeSet(movies_xml, "//director")
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting Nodes}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+<<node_set_lang_spa, tidy=FALSE>>=
+# set of movie nodes with attribute lang = 'eng'
+getNodeSet(movies_xml, "//movie[@lang='eng']")
+@
+\end{column}
+
+\begin{column}{0.5\textwidth}
+<<node_set_lang_eng, tidy=FALSE>>=
+# set of movie nodes with attribute lang = 'spa'
+getNodeSet(movies_xml, "//movie[@lang='spa']")
+@
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  {\Huge \textcolor{mandarina}{Case Study}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{R Mailing Lists}
+
+\begin{center}
+\includegraphics[width=10cm]{images/mailing_lists.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Parsing HTML document}
+
+Let's parse the R mailing lists page: \\
+{\scriptsize \url{http://www.r-project.org/mail.html}}
+
+<<R_mailing_list, eval=FALSE>>=
+# R mailing lists url
+mailing_url = "http://www.r-project.org/mail.html"
+
+# parse html content
+mailing_doc = htmlParse(mailing_url)
+@
+
+<<mymailing_list, echo=FALSE>>=
+# url
+mymail = "/Users/Gaston/Documents/Data_Technologies/data/mailing_lists.html"
+
+# parse html content
+mailing_doc = htmlParse(mymail)
+@
+
+<<mailing_class>>=
+# check class 'HTMLInternalDocument'
+class(mailing_doc)
+
+# get root node
+mailing_root = xmlRoot(mailing_doc)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Inspecting Root Node}
+
+Let's inspect the Root Node
+<<mailing_root_inspection>>=
+# how many child nodes in root
+xmlSize(mailing_root)
+
+# names of root child nodes
+xmlSApply(mailing_root, xmlName)
+
+# how many nodes in each children
+xmlSApply(mailing_root, xmlSize)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting HTML body element}
+
+<<mailing_body>>=
+# get the html body node
+mailing_body = xmlChildren(mailing_root)$body
+
+# get all 'h1' elements
+xpathSApply(mailing_body, "h1")
+
+# get all 'h2' elements
+xpathSApply(mailing_body, "h2")
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Special Interest Group}
+
+\begin{center}
+\includegraphics[width=10cm]{images/mailing_sig.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Special Interest Group}
+
+Take a look at the source code: note that it is a \highcode{table} node
+
+\begin{center}
+\includegraphics[width=9cm]{images/mailing_sig_source.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting "Special Interest Groups"}
+
+Let's work with the \textit{Special Interest Groups} section. We can read the content of the table with \highcode{readHTMLTable()}
+
+<<sig_html_table_content>>=
+# get the html table "Special Interest Groups"
+sig_content = readHTMLTable(mailing_doc, which = 1)
+
+head(sig_content)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting "Special Interest Groups" (SIG)}
+
+We can also work with XPath expressions in order to get the information contained in the table of \textit{Special Interest Groups}
+
+\bigskip
+
+For instance, let's work with the \highcode{a} elements in the \highcode{table} \low{(i.e. the links)}
+
+<<sig_table, tidy=FALSE>>=
+# SIG table from doc 'HTMLInternalDocument'
+sig_from_doc = xpathSApply(mailing_doc, "//table/..//a")
+
+# SIG table from root 'XMLInternalElementNode'
+sig_from_root = xpathSApply(mailing_root, "//table/..//a")
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting "Special Interest Groups" (SIG)}
+
+Let's compare the results:
+<<sig_table_comparison, tidy=FALSE>>=
+head(sig_from_doc, n = 2)
+
+head(sig_from_root, n = 2)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting "Special Interest Groups" (SIG)}
+
+Here's one way to get the link names of the Special Interest Groups \low{(ie values in the first column of the html table)}
+<<sig_list_names, tidy=FALSE>>=
+# names of SIG links
+sapply(sig_from_root, xmlValue)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting "Special Interest Groups" (SIG)}
+
+Extracting \highcode{a} elements in \highcode{table}
+<<sig_link_nodes>>=
+# XPath expression to extract 'a' nodes
+sig_links = xpathSApply(mailing_root, "//table/..//a")
+head(sig_links, n = 4)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting "Special Interest Groups" (SIG)}
+
+Extracting attributes from \highcode{a} elements in \highcode{table}
+<<sig_link_attrs>>=
+# XPath expression attributes of nodes
+sig_link_attrs = xpathSApply(mailing_root, "//table/..//a", xmlAttrs)
+head(sig_link_attrs)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting "Special Interest Groups" (SIG)}
+
+Extracting values from \highcode{href} attributes of \highcode{a} elements in \highcode{table}
+<<sig_link_attr_vals>>=
+# XPath expression to extract attribute values of nodes
+sig_link_attr_vals = xpathSApply(mailing_root, "//table/..//a", 
+                                 xmlGetAttr, "href")
+head(sig_link_attr_vals, n = 10)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting "Special Interest Groups" (SIG)}
+
+Extracting content from \highcode{a} elements in \highcode{table}
+<<sig_link_attr_values>>=
+# XPath expression to extract content from nodes
+sig_link_values = xpathSApply(mailing_root, "//table/..//a", xmlValue)
+
+sig_link_values
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting "Special Interest Groups" (SIG)}
+
+Extracting second \highcode{td} elements in \highcode{table} \low{(ie those containing the desccription of the SIGs)}
+<<sig_td_nodes>>=
+# XPath expression to extract SIG descriptions
+sig_desc_nodes = xpathSApply(mailing_root, "//table/tbody/tr/td[2]")
+
+head(sig_desc_nodes, n = 5)
+@
+
+\end{frame}
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Getting "Special Interest Groups" (SIG)}
+
+Extracting the content from the second \highcode{td} elements in \highcode{table} \low{(ie the actual desccription of the SIGs)}
+<<sig_descriptions>>=
+# XPath expression to extract SIG descriptions
+sig_descriptions = xpathSApply(mailing_root, "//table/tbody/tr/td[2]",
+                               xmlValue)
+
+head(sig_descriptions, n = 10)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\end{document}
