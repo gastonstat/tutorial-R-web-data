@@ -1,0 +1,1476 @@
+\documentclass{beamer}
+
+% load packages
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{upquote}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{color}
+\usepackage{lmodern}
+
+\input{../header.tex}
+
+\title[Getting data from the web with R]{\LARGE Getting Data from the Web with R} 
+\subtitle[Web Data in R]{\large Part 2: Reading Files from the Web}
+\author[gastonsanchez.com]{
+ \textcolor{gray}{\textbf{G}aston \textbf{S}anchez}
+}
+\institute[]{\scriptsize \textcolor{lightgray}{April-May 2014}}
+\date[CC BY-SA-NC 4.0]{
+ \textcolor{lightgray}{\tiny{Content licensed under 
+ \href{http://creativecommons.org/licenses/by-nc-sa/4.0/}{CC BY-NC-SA 4.0}}}
+}
+
+
+\begin{document}
+
+<<setup, include=FALSE>>=
+# smaller font size for chunks
+opts_chunk$set(size = 'tiny')
+thm <- knit_theme$get("bclear")
+knit_theme$set(thm)
+options(width=78)
+@
+
+
+%--- the titlepage frame -------------------------%
+
+\begin{frame}[plain]
+ \titlepage
+\end{frame}
+
+%------------------------------------------------
+
+{ % all template changes are local to this group.
+    \setbeamertemplate{navigation symbols}{}
+    \begin{frame}[plain]
+        \begin{tikzpicture}[remember picture,overlay]
+            \node[at=(current page.center)] {
+                \includegraphics[width=\paperwidth]{images/web2r.pdf}
+            };
+        \end{tikzpicture}
+     \end{frame}
+}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Readme}
+
+\begin{block}{\scriptsize License:}
+\tiny
+ \begin{itemize}
+  \item[] Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License \\ 
+  \url{http://creativecommons.org/licenses/by-nc-sa/4.0/}{}
+ \end{itemize}
+\end{block}
+
+\begin{block}{\scriptsize You are free to:}
+\tiny
+ \begin{itemize}
+  \item[] \textcolor{darkgray}{\textbf{Share}} --- \textcolor{gray}{copy and redistribute the material}
+  \item[] \textcolor{darkgray}{\textbf{Adapt}} --- \textcolor{gray}{rebuild and transform the material}
+ \end{itemize}
+\end{block}
+
+\vspace{2mm}
+\begin{block}{\scriptsize Under the following conditions:}
+\tiny
+\begin{itemize}
+ \item[] \textcolor{darkgray}{\textbf{Attribution}} --- \textcolor{gray}{You must give appropriate credit, provide a link to the license, and indicate if changes were made.}
+ \item[] \textcolor{darkgray}{\textbf{NonCommercial}} --- \textcolor{gray}{You may not use this work for commercial purposes.}
+ \item[] \textcolor{darkgray}{\textbf{Share Alike}} --- \textcolor{gray}{If you remix, transform, or build upon this 
+ work, you must distribute your contributions under the same license to this one.}
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Lectures Menu}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+ \begin{block}{Slide Decks}
+  \begin{enumerate}
+   \item \textcolor{lightgray}{Introduction}
+   \item \textbf{Reading files from the Web}
+   \item \textcolor{lightgray}{Basics of XML and HTML}
+   \item \textcolor{lightgray}{Parsing XML / HTML content}
+   \item \textcolor{lightgray}{Handling JSON data}
+   \item \textcolor{lightgray}{HTTP Basics and the RCurl Package}
+   \item \textcolor{lightgray}{Getting data via Web Forms}
+   \item \textcolor{lightgray}{Getting data via Web APIs}
+  \end{enumerate}
+ \end{block}
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  \Huge{\textcolor{mandarina}{Reading Files \\ from the Web}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Data Files from the Web...}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+ \includegraphics[width=4.5cm]{images/moby_dick_book.png}
+\end{column}
+\begin{column}{0.5\textwidth}
+ \includegraphics[width=4.5cm]{images/iris_data.png}
+\end{column}
+\end{columns}
+
+\vspace{5mm}
+
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+ \includegraphics[width=4.5cm]{images/cars2004_data.png}
+\end{column}
+\begin{column}{0.5\textwidth}
+ \includegraphics[width=4.5cm]{images/wikipedia_table.png}
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Goal}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+
+\begin{block}{From the web to R}
+The goal of these slides is to show you \textbf{different ways to read (data) files from the Web} into R
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Synopsis}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+
+\begin{block}{In a nutshell}
+We'll cover a variety of situations you most likely will find yourself dealing with:
+\begin{itemize}
+ \item reading raw (plain) text
+ \item reading tabular (spreadsheet-like) data
+ \item reading structured data (xml, html) as text
+ \item reading R scripts and Rdata files
+\end{itemize}
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Some References}
+
+\begin{itemize}
+ \item R Data Import / Export Manual \\
+ \low{by R Core Team}
+ \item Data Manipulation with R \\
+ \low{by Phil Spector}
+ \item R Programming for Bioinformatics \\
+ \low{by Robert Gentleman}
+ \item The Art of R Programming \\
+ \low{by Norm Matloff}
+ \item XML and Web Technlogies for Data Sciences with R \\
+ \low{by Deb Nolan and Duncan Temple Lang}
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Considerations}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+
+\begin{block}{Keep in mind}
+All the material described in this presentation relies on 3 key assumptions:  
+\begin{itemize}
+ \item we know \high{where} the data is located
+ \item we know \high{how} the data is stored (i.e. type of file)
+ \item all we want is to import the data in R
+\end{itemize}
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  \Huge{\textcolor{mandarina}{Reading Files \\ from the Web}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+{ % all template changes are local to this group.
+    \setbeamertemplate{navigation symbols}{}
+    \begin{frame}[plain]
+        \begin{tikzpicture}[remember picture,overlay]
+            \node[at=(current page.center)] {
+                \includegraphics[width=\paperwidth]{images/R_data_import_manual.png}
+            };
+        \end{tikzpicture}
+     \end{frame}
+}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Documentation}
+
+\begin{block}{R Data Import / Export Manual}
+This is the authoritative source of information to read and learn \textit{almost all} about importing ---and exporting--- data in R:
+ \begin{itemize}
+  \item html version \\
+  { \scriptsize \url{http://cran.r-project.org/doc/manuals/r-release/R-data.html} }
+  \item pdf version \\
+  { \scriptsize \url{http://cran.r-project.org/doc/manuals/r-release/R-data.pdf} }
+  \end{itemize}
+\end{block}
+
+\vspace{5mm}
+{ \scriptsize 
+\high{Good news:} \low{pretty much everything you need to know it's there} \\
+\high{Bad news:} \low{it is not beginner friendly =(}
+}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Basics First}
+
+R is equipped with a set of handy functions that allow us to read a wide range of data files
+
+\bigskip
+
+The trick to use those functions depends on the format of the data we want to read, and the way R handles the imported values:
+\begin{itemize}
+ \item what type of objets \low{(eg \code{vector}, \code{list}, \code{data.frame})} 
+ \item what kind of modes \low{(eg \code{character}, \code{numeric}, \code{factor})}
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Basics First (con't)}
+
+\begin{columns}[t]
+\begin{column}{0.2\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.6\textwidth}
+
+\begin{block}{Fundamentals}
+Let's start with the basic reading functions and some R technicalities
+ \begin{itemize}
+  \item \highcode{scan()}
+  \item \highcode{readLines()}
+  \item \highcode{connections}
+ \end{itemize}
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Conceptual Diagram}
+
+\begin{center}
+\includegraphics[width=8cm]{images/read_functions.pdf}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Built-in reading functions}
+
+\begin{itemize}
+ \item The primary functions to read files in R are \highcode{scan()} and \highcode{readLines()}
+
+ \item \highcode{readLines()} is the workhorse function to read raw text in R as character strings
+
+ \item \highcode{scan()} is a low-level function for reading data values, and it is extended by \highcode{read.table()} and its related functions
+
+ \item When reading files, there's the special concept under the hood called R \highcode{connections} 
+
+ \item Both \code{scan()} and \code{readLines()} take a \highcode{connection} as input
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Connections}
+
+\begin{block}{R connections?}
+\textbf{Connection} is the term used in R to define a mechanism for handling input (reading) and output (writing) operations. 
+\end{block}
+
+\begin{block}{What do they do?}
+A \textbf{connection} is just an object that tells R to be prepared for opening a data source (eg file in local directory, or a file url) \\
+See the full help documentation with: \highcode{?connections}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Types of Connections}
+
+\begin{center}
+ \begin{tabular}{l l}
+  \multicolumn{2}{c}{\textcolor{turquoise}{Functions to create connections}} \\
+  \hline
+  Function & Input \\
+  \hline
+  \code{file()} & path to the file to be opened or complete URL \\
+  \code{url()} & a complete URL \\
+  \code{gzfile()} & path to a file compressed by \code{gzip} \\
+  \code{bzfile()} & path to a file compressed by \code{bzip2} \\
+  \code{xzfile()} & path to a file compressed by \code{xz} \\
+  \code{unz()} & path to the zip file with \code{.zip} extension \\
+  \code{pipe()} & command line to be piped to or from \\
+  \code{fifo()} & path of the fifo \\
+  \hline
+ \end{tabular}
+\end{center}
+
+\vspace{3mm}
+{\footnotesize \high{By default, creating a connection does not open the connection. But they may be opened with the argument \code{open} }
+}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Connections (con't)}
+
+\begin{block}{Usefulness}
+Connections provide a \textbf{means to have more control} over the way R will ``comunicate'' with the resources to be read (or written).
+\end{block}
+
+\begin{block}{Keep in mind}
+Most of the times you don't need to use or worry about connections. However, you should know that they can play an important role behind the built-in fuctions to read data in R.
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Important Connections}
+
+\begin{block}{\code{file()}}
+The most commonly used connection is \highcode{file()}, which is used by most reading functions (to open a local file for reading or writing data).
+\end{block}
+
+\begin{block}{\code{url()} }
+Because we're interested in getting data from the web, the one connection that becomes a protagonist is the \highcode{url()} connection.
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Connection for the web}
+
+\begin{block}{Using \code{url()}}
+ \begin{verbatim}
+url(description, open = "", blocking = TRUE,
+    encoding = getOption("encoding"))
+ \end{verbatim}
+\end{block}
+
+The main input for \highcode{url()} is the \highcode{description} which has to be a complete URL, including scheme such as \code{http://}, \code{ftp://}, or \code{file://}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Example of \code{url} connection}
+
+For instance, let's create a connection to the R homepage:
+<<url_example>>=
+# creating a url connection to the R homepage
+r_home = url("http://www.r-project.org/")
+
+# what's in r_home
+r_home
+# is open?
+isOpen(r_home)
+@
+
+{\scriptsize \high{Note that we are just defining a connection. By default, the connection does not open anything}}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{About Connections}
+
+\begin{block}{Should we care?}
+ \begin{itemize}
+  \item Again, most of the times we don't need to explicitly use \highcode{url()}. 
+  \item Connections can be used anywhere a file name could be passed to functions like \highcode{scan()} or \highcode{read.table()}. 
+  \item Usually, the reading functions ---eg \code{readLines()}, \code{read.table()}, \code{read.csv()}--- will take care of the URL connection for us.
+  \item However, there may be occassions in which we will need to specify a \code{url()} connection.
+ \end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  \Huge{\textcolor{mandarina}{Reading Text}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Objective}
+
+\begin{columns}[t]
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\begin{column}{0.8\textwidth}
+
+\begin{block}{Reading Text Files As Text}
+In this section we'll talk about reading text files with the purpose of importing their contents as \textit{raw text} (ie character strings) in R.
+\end{block}
+
+\end{column}
+\begin{column}{0.1\textwidth}
+%--- empty space ---%
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{About Text Files}
+
+\begin{quotation}
+``In computer literature, there is often a distinction made between text files and binary files. That distinction is somewhat misleading ---every file is binary in the sense that it consists of 0s and 1s. Let's take the term text files to mean a file that consists mainly of ASCII characters ... and that uses newline characters to give the humans the perception of lines.''
+\end{quotation}
+
+{\footnotesize 
+\hspace{8mm} \high{Norman Matloff (2011)} \\
+\hspace{8mm} \low{The Art of R Programming}
+}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{About Text Files}
+
+Some considerations so we can all be on the same page:
+\begin{itemize}
+ \item By \high{text files} we mean \textit{plain text files} \\
+ \item \textit{Plain text} as an umbrella term for any file that is in a human-readable form \low{(eg \code{.txt, .csv, .xml, .html})}
+ \item Text files stored as a sequence of characters 
+ \item Each character stored as a single byte of data
+ \item Data is arranged in rows, with several values stored on each row
+ \item Text files that can be read and manipulated with a text editor
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Reading Text Functions}
+
+\begin{block}{Functions for reading text}
+\begin{itemize}
+ \item \highcode{readLines()} is the main function to read text files as \textit{raw text} in R
+ \item \highcode{scan()} is another function that can be used to read text files. It is more generic and low-level but we can specify some of its parameters to import content as text
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{About \code{readLines()}}
+
+\begin{block}{Function \code{readLines()}}
+\begin{itemize}
+ \item \highcode{readLines()} is the workhorse function to read text files as \textit{raw text} in R
+
+ \item The main input is the file to be read, either specified with a \highcode{connection} or with the file name 
+
+\item \highcode{readLines()} treats each line as a string, and it returns a character vector
+
+ \item The output vector will contain as many elements as number of lines in the read file
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{readLines()}
+
+\begin{block}{Using \code{readLines()}}
+ \begin{verbatim}
+readLines(con = stdin(), n = -1L, ok = TRUE, 
+          warn = TRUE, encoding = "unknown")
+ \end{verbatim}
+\end{block}
+
+\begin{itemize}
+ \item \highcode{con} a connection, which in our case will be a complete URL
+ \item \highcode{n} the number of lines to read
+ \item \highcode{ok} whether to reach the end of the connection
+ \item \highcode{warn} warning if there is no End-Of-Line
+ \item \highcode{encoding} types of encoding for input strings
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+{ % all template changes are local to this group.
+    \setbeamertemplate{navigation symbols}{}
+    \begin{frame}[plain]
+    \frametitle{Moby Dick}
+        \begin{tikzpicture}[remember picture,overlay]
+            \node[at=(current page.center)] {
+                \includegraphics[width=\paperwidth]{images/moby_dick.jpg}
+            };
+        \end{tikzpicture}
+     \end{frame}
+}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Example}
+
+\begin{block}{Project Gutenberg}
+A great collection of texts are available from the \textbf{Project Gutenberg} which has a catalog of more than 25,000 free online books: \\
+{ \footnotesize \url{http://www.gutenberg.org}}
+\end{block}
+
+\begin{block}{Moby Dick}
+Let's consider the famous novel \textbf{Moby Dick} by Herman Melville. 
+A plain text file of Moby Dick can be found at: \\
+{ \footnotesize \url{http://www.gutenberg.org/ebooks/2701.txt.utf-8}}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Moby Dick text file}
+
+\url{http://www.gutenberg.org/ebooks/2701.txt.utf-8}
+
+\begin{center}
+\includegraphics[width=8cm]{images/moby_dick_book.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading Raw text}
+
+Here's how you could read the first 500 lines of cotent with \highcode{readLines()}
+
+<<moby_dick_url, eval=FALSE>>=
+# url of Moby Dick (project Gutenberg)
+moby_url = url("http://www.gutenberg.org/ebooks/2701.txt.utf-8")
+
+# reading the content (first 500 lines)
+moby_dick = readLines(moby_url, n = 500)
+@
+
+<<moby_dick_ex, echo=FALSE>>=
+# reading the content (first 500 lines)
+moby_text = "/Users/Gaston/Documents/Data_Technologies/data/moby_dick.txt"
+
+moby_dick = readLines(moby_text, n=5)
+@
+
+<<moby_dick_lines, tidy=FALSE>>=
+# first five lines
+moby_dick[1:5]
+@
+
+{\footnotesize \high{Note that each line read is stored as an element in the character vector \code{moby\_dick}}}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Goot to Know}
+
+\begin{block}{Terms of Service}
+Some times, reading data directly from a website may be against the \high{terms of use} of the site.
+\end{block}
+
+\begin{block}{Web Politeness}
+When you're reading (and ``playing'' with) content from a web page, make a local copy as a courtesy to the owner of the web site so you don't overload their server by constantly rereading the page. To make a copy from inside of R, look at the \highcode{download.file()} function. 
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Download Moby Dick}
+
+\begin{block}{Downloading}
+It is good advice to download a copy of the file to your computer, and then play with it. 
+
+\bigskip
+
+Let's use \highcode{download.file()} to save a copy in our working directory. In this case we create the file \highcode{mobydick.txt}
+
+<<moby_dick_download, eval=FALSE, tidy=FALSE>>=
+# download a copy in the working directory
+download.file("http://www.gutenberg.org/cache/epub/2701/pg2701.txt",
+              "mobydick.txt")
+@
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Abut scan()}
+
+\begin{block}{Function \code{scan()}}
+Another very useful function that we can use to read text is \highcode{scan()}. By default, \code{scan()} expects to read numeric values, but we can change this behavior with the argument \highcode{what}
+
+{\footnotesize
+\begin{verbatim}
+scan(file = "", what = double(), nmax = -1, n = -1, sep = "",
+     quote = if(identical(sep, "\n")) "" else "'\"", dec = ".",
+     skip = 0, nlines = 0, na.strings = "NA",
+     flush = FALSE, fill = FALSE, strip.white = FALSE,
+     quiet = FALSE, blank.lines.skip = TRUE, multi.line = TRUE,
+     comment.char = "", allowEscapes = FALSE,
+     fileEncoding = "", encoding = "unknown", text)
+ \end{verbatim}
+}
+
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Function scan() (con't)}
+
+\begin{block}{Some \code{scan()} arguments}
+\begin{itemize}
+ \item \highcode{file} the file name or a connection
+ \item \highcode{what} type of data to be read
+ \item \highcode{n} maximum number of data values to read
+ \item \highcode{sep} type of separator
+ \item \highcode{skip} number of lines to skip before reading values
+ \item \highcode{nlines} maximum number of lines to be read
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Moby Dick Chapter 1}
+
+Chapter 1 starting at line 536. \\
+How do we get the first lines of that chapter?
+\begin{center}
+\includegraphics[width=8cm]{images/moby_dick_535.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading Some Lines}
+
+\begin{block}{Let's make it more interesting}
+If we want to read just a pre-specified number of lines, we have to loop over the file lines and read the content with \highcode{scan()}. For instance, let's skip the first 535 lines, and then read the following 10 lines of Chapter 1
+
+<<moby_dick_chap1_ex, eval=FALSE, tidy=FALSE>>=
+# empty vector to store results
+moby_dick_chap1 = rep("", 10)
+
+# number of lines to skip until Chapter 1
+skip = 535
+
+# reading 10 lines (line-by-line using scan)
+for (i in 1L:10) {
+  one_line = scan("mobydick.txt", what = "", skip = skip, nlines = 1)
+  # pasting the contents in one_line
+  moby_dick_chap1[i] = paste(one_line, collapse = " ")
+  skip = skip + 1
+}
+@
+
+<<moby_dick_chap1, echo=FALSE>>=
+moby_text = "/Users/Gaston/Documents/Data_Technologies/data/moby_dick.txt"
+moby_dick_chap1 = rep("", 10)
+skip = 535
+for (i in 1L:10) {
+  one_line = scan(moby_text, what="", skip=skip, nlines=1)
+  moby_dick_chap1[i] = paste(one_line, collapse=" ")
+  skip = skip + 1
+}
+@
+
+{\scriptsize \high{Note that we are using \code{paste()} to join (collapse) all the scanned values in \code{one\_line}}}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading Some Lines (con't)}
+
+<<moby_dick_chap1_show, tidy=FALSE>>=
+# lines 536-545
+moby_dick_chap1
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading an HTML file}
+
+\begin{block}{HTML File}
+Our third example involves reading the contents of an html file. We're just illustrating how to import html content as raw text in R. \\
+\low{(We are not \textit{parsing} html; we'll see that topic in the next lecture)}
+\end{block}
+
+\begin{block}{Egyptian Skulls}
+Let's consider the file containing information about the Egyptian Skulls data set by Thomson \textit{et al}: \\
+{ \footnotesize \url{http://lib.stat.cmu.edu/DASL/Datafiles/EgyptianSkulls.html}}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{HTML File}
+
+{\footnotesize \url{http://lib.stat.cmu.edu/DASL/Datafiles/EgyptianSkulls.html}}
+
+\begin{center}
+\includegraphics[width=8cm]{images/skulls_data.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Skulls Data}
+
+To read the html content we use \highcode{readLines()}
+
+<<skulls_data, eval=FALSE, tidy=FALSE>>=
+# read html file content as a string vector
+skulls = readLines("http://lib.stat.cmu.edu/DASL/Datafiles/EgyptianSkulls.html")
+@
+
+<<myskulls, echo=2, tidy=FALSE>>=
+skulls = readLines("/Users/Gaston/Documents/Data_Technologies/data/skulls_data.html")
+head(skulls, n = 10)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+ \begin{center}
+  \Huge{\textcolor{mandarina}{Reading Tabular Data}}
+ \end{center}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{About Tabular Data}
+
+\begin{block}{Tables}
+R is great for reading data in tabular \low{(spreadsheet-like)} format.
+
+\bigskip
+Tabular data, also known as rectangular data, are typically text files \low{(ie can be read and manipulated with a text editor)}
+
+\bigskip
+The conventional form is data values that can be seen as an array of rows and columns
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Tabular Data File Formats}
+
+\begin{block}{Two main formats}
+ \begin{itemize}
+  \item delimited formats
+  \item fixed-width formats
+ \end{itemize}
+\end{block}
+
+\begin{block}{Delimited}
+In a delimited format, values within a row are separated by a special character, or delimiter.
+\end{block}
+
+\begin{block}{Fixed-Width}
+In a fixed-width format, each value is allocated a fixed number of characters within every row.
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+<<star_wars_data, echo=FALSE>>=
+sw = list(
+  c("Name", "Gender", "Homeworld", "Born", "Jedi"),
+  c("Anakin", "male", "Tatooine", "41.9BBY",  "yes"),  
+  c("Amidala", "female", "Naboo", "46BBY", "no"),
+  c("Luke", "male", "Tatooine", "19BBY", "yes"),
+  c("Leia", "female", "Alderaan", "19BBY", "no"),
+  c("Obi-Wan",  "male", "Stewjon", "57BBY", "yes"),
+  c("Han", "male", "Corellia", "29BBY", "no"),
+  c("Palpatine", "male", "Naboo", "82BBY", "no"),
+  c("R2-D2", "unknown", "Naboo", "33BBY", "no")
+)
+
+# sw_blank = lapply(sw, function(x) cat(paste(x, collapse = " "), "\n"))
+# sw_tab = lapply(sw, function(x) cat(paste(x, collapse = "   "), "\n"))
+# sw_csv = lapply(sw, function(x) cat(paste(x, collapse = ","), "\n"))
+# sw_csv2 = lapply(sw, function(x) cat(paste(x, collapse = ";"), "\n"))
+@
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Data Table Toy Example}
+
+\begin{center}
+\textcolor{turquoise}{Imagine we have some tabular data}
+\end{center}
+
+\begin{center}
+ \begin{tabular}{l l l l l}
+  \hline
+  Name & Gender & Homeland & Born & Jedi \\
+  \hline
+  Anakin & male & Tatooine & 41.9BBY & yes \\  
+  Amidala & female & Naboo & 46BBY & no \\
+  Luke & male & Tatooine & 19BBY & yes \\
+  Leia & female & Alderaan & 19BBY & no \\
+  Obi-Wan & male & Stewjon & 57BBY & yes \\
+  Han & male & Corellia & 29BBY & no \\
+  Palpatine & male & Naboo & 82BBY & no \\
+  R2-D2 & unknown & Naboo & 33BBY & no \\
+  \hline
+ \end{tabular}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Data table formats}
+
+\begin{columns}[t]
+\begin{column}{0.35\textwidth}
+\high{space delimited}
+{\tiny \begin{verbatim}
+Name Gender Homeworld Born Jedi
+Anakin male Tatooine 41.9BBY yes  
+Amidala female Naboo 46BBY no
+Luke male Tatooine 19BBY yes
+Leia female Alderaan 19BBY no
+Obi-Wan male Stewjon 57BBY yes
+Han male Corellia 29BBY no
+Palpatine male Naboo 82BBY no
+R2-D2 unknown Naboo 33BBY no
+\end{verbatim}}
+\end{column}
+\begin{column}{0.4\textwidth}
+\high{tab delimited}
+{\tiny \begin{verbatim}
+Name  Gender  Homeworld  Born  Jedi
+Anakin  male  Tatooine  41.9BBY yes	
+Amidala female  Naboo 46BBY no
+Luke  male  Tatooine  19BBY yes
+Leia  female  Alderaan  19BBY no
+Obi-Wan male  Stewjon 57BBY yes
+Han male  Corellia  29BBY no
+Palpatine male  Naboo 82BBY no
+R2-D2 unknown	Naboo 33BBY no
+\end{verbatim}}
+\end{column}
+\end{columns}
+
+\vspace{5mm}
+
+\begin{columns}[t]
+\begin{column}{0.35\textwidth}
+\high{comma delimited}
+{\tiny \begin{verbatim}
+Name,Gender,Homeworld,Born,Jedi
+Anakin,male,Tatooine,41.9BBY,yes  
+Amidala,female,Naboo,46BBY,no
+Luke,male,Tatooine,19BBY,yes
+Leia,female,Alderaan,19BBY,no
+Obi-Wan,male,Stewjon,57BBY,yes
+Han,male,Corellia,29BBY,no
+Palpatine,male,Naboo,82BBY,no
+R2-D2,unknown,Naboo,33BBY,no
+\end{verbatim}}
+\end{column}
+\begin{column}{0.4\textwidth}
+\high{Fixed width}
+{\tiny \begin{verbatim}
+Name      Gender  Homeworld Born     Jedi
+Anakin    male    Tatooine  41.9BBY  yes  
+Amidala   female  Naboo     46BBY    no
+Luke      male    Tatooine  19BBY    yes
+Leia      female  Alderaan  19BBY    no
+Obi-Wan   male    Stewjon   57BBY    yes
+Han       male    Corellia  29BBY    no
+Palpatine male    Naboo     82BBY    no
+R2-D2     unknown Naboo     33BBY    no
+\end{verbatim}}
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Functions}
+
+\begin{block}{Main functions}
+\begin{itemize}
+ \item \highcode{scan()} reads data values (one by one)
+ \item \highcode{read.table()} main function for reading tabular data
+ \item \highcode{read.csv()} convenient wraper of \code{read.table()} designed for reading \textit{comma separated values} (CSV) files
+ \item \highcode{read.delim()} wrapper of \code{read.table()} for any delimited file format
+ \item \highcode{read.fwf()} designed for reading files with fixed width 
+ separated values
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Taxon Data}
+
+\begin{block}{The R Book}
+Example from \textbf{The R Book} by Michael Crawley \\
+{\scriptsize \url{http://www.bio.ic.ac.uk/research/mjcraw/therbook/}}
+\end{block}
+
+\begin{center}
+\includegraphics[width=7cm]{images/rbook_files.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Taxon Data}
+
+Taxon Data (from The R Book) \\
+{\scriptsize \url{http://www.bio.ic.ac.uk/research/mjcraw/therbook/data/taxon.txt}}
+\begin{center}
+\includegraphics[width=8cm]{images/taxon_data.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Taxon Data}
+
+Let's read the data \highcode{"taxon"}
+
+<<taxon, eval=FALSE, tidy=FALSE>>=
+# url of taxon data
+taxon_url = "http://www.bio.ic.ac.uk/research/mjcraw/therbook/data/taxon.txt"
+
+# import data in R
+taxon = read.table(taxon_url, header = TRUE, row.names = 1)
+@
+
+<<mytaxon, echo=3>>=
+mytaxon = "/Users/Gaston/Documents/Data_Technologies/data/taxon.txt"
+taxon = read.table(mytaxon, header = TRUE, row.names = 1)
+head(taxon)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Iris Example}
+
+\begin{block}{Iris Data}
+Data set \highcode{"iris"} from UCI Machine Learning Repo \\
+{\scriptsize 
+\url{https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data}}
+
+\begin{center}
+\includegraphics[width=8cm]{images/iris_data.png}
+\end{center}
+
+Example from the \textbf{UCI Machine Learning Repository} \\
+{\scriptsize \url{https://archive.ics.uci.edu/ml/datasets.html}}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Iris Data}
+
+\begin{block}{How do we read the data?}
+If you try to simply use \code{read.csv()}, you'll be disappointed:
+<<bad_iris, eval=FALSE, tidy=FALSE>>=
+# URL of data file
+iris_file = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+
+# this won't work
+iris_data = read.csv(iris_file, header = FALSE)
+@
+\end{block}
+
+Note that the URL starts with \highcode{https://}, that means a secured connection. The solution requires some special functions:
+\begin{itemize}
+ \item We need to use the R package \highcode{"RCurl"} to make an \code{HTTPS} request with \highcode{getURL()}
+ \item We also need to use \highcode{textConnection()} inside \highcode{read.csv()}
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading Iris Data}
+
+This is how to successfully read the iris data set in R:
+<<iris, eval=FALSE, tidy=FALSE>>=
+# URL of data file
+iris_file = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+
+library(RCurl)
+iris_url = getURL(iris_file)
+iris_data = read.csv(textConnection(iris_url), header = FALSE)
+@
+
+<<myiris, echo=3>>=
+myiris = "/Users/Gaston/Documents/Data_Technologies/data/iris_data.txt"
+iris_data = read.csv(myiris, header = FALSE)
+head(iris_data)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Excel File Example}
+
+\begin{block}{Excel file}
+Example from \textit{Data Mining Course} by Lluis Belanche \\
+{\scriptsize 
+\url{http://www.lsi.upc.edu/~belanche/Docencia/mineria/mineria.html}}
+
+\begin{center}
+\includegraphics[width=6cm]{images/mineria_webpage.png}
+\end{center}
+
+We'll read the excel file named \code{alpha.xls} available at: \\
+{\tiny 
+\url{alpha_xls = "http://www.lsi.upc.edu/~belanche/Docencia/mineria/Practiques/alpha.xls"
+}}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{Excel alpha data}
+
+Alpha Data (from Data Mining course)
+\begin{center}
+\includegraphics[width=8cm]{images/alpha_data.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+<<myalpha, echo=FALSE, message=FALSE>>=
+library(gdata)
+alpha_xls = "/Users/Gaston/Documents/Data_Technologies/data/alpha.xls"
+alpha_csv = "/Users/Gaston/Documents/Data_Technologies/data/alpha.csv"
+alpha_data = read.csv(alpha_csv)
+@
+
+\begin{frame}[fragile]
+\frametitle{Reading alpha Data}
+
+We need to use the function \highcode{read.xls()} from the package \highcode{"gdata"} \low{(you need to have Perl installed in your machine)}
+<<alpha_xls, eval=FALSE, tidy=FALSE>>=
+# load package 'gdata'
+library(gdata)
+
+# excel file (1st worksheet named "dades")
+alpha_xls = "http://www.lsi.upc.edu/~belanche/Docencia/mineria/Practiques/alpha.xls"
+@
+
+Count the number of sheets in excel file, and list sheet names:
+<<myalpha_sheets>>=
+# how many sheets
+sheetCount(alpha_xls)
+# names of sheets
+sheetNames(alpha_xls)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading alpha Data}
+
+Since the data set is in the first worksheet we use the argument \highcode{sheet = 1}:
+<<myalpha_show>>=
+# import sheet 1 (dades) in R
+alpha_data = read.xls(alpha_xls, sheet = 1)
+
+head(alpha_data)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Google Spreadsheet}
+
+\begin{block}{Cars2004 Data}
+Example with data in Google Docs Spreadsheet \\
+\begin{center}
+\includegraphics[width=8cm]{images/cars2004_data.png}
+
+\scalebox{.5}{\url{https://docs.google.com/spreadsheet/ccc?key=0AjoVnZ9iB261dHRfQlVuWDRUSHdZQ1A4N294TEstc0E&usp=sharing
+}}
+\end{center}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading Cars2004 Google Doc}
+
+To read data from a Google Doc Spreadsheet we need to use the R package \highcode{"RCurl"} (to connect via a secured HTTP). In addition we need to know the \textbf{publick key} of the document. Here's how to read the Cars2004 google doc:
+<<cars2004, eval=FALSE>>=
+# load package RCurl
+library(RCurl)
+
+# google docs spreadsheets url
+google_docs = "https://docs.google.com/spreadsheet/"
+
+# public key of data 'cars'
+cars_key = "pub?key=0AjoVnZ9iB261dHRfQlVuWDRUSHdZQ1A4N294TEstc0E&output=csv"
+
+# download URL of data file
+cars_csv = getURL(paste(google_docs, cars_key, sep = ""))
+
+# import data in R (through a text connection)
+cars2004 = read.csv(textConnection(cars_csv), row.names = 1, header = TRUE)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading Cars2004 Google Doc}
+
+<<mycars2004, echo=3, size='tiny'>>=
+# ---------------------------------
+mycars = "/Users/Gaston/Documents/Data_Technologies/data/cars2004.csv"
+cars2004 = read.csv(mycars, row.names=1, header=TRUE)
+cars2004
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Wikipedia Table}
+
+\begin{block}{Wikipedia Table}
+Let's read an HTML table from Wikipedia. This is not technically a file, but a piece of content from an html document
+
+\begin{center}
+\includegraphics[width=6.5cm]{images/wikipedia_table.png}
+
+\scalebox{.5}{\url{http://en.wikipedia.org/wiki/World_record_progression_1500_metres_freestyle
+}}
+\end{center}
+
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading data in an HTML Table}
+
+To read an HTML table we need to use the function \highcode{readHTMLTable} from the R package \highcode{"XML"}
+
+<<wiki_swim, eval=FALSE>>=
+# load XML
+library(XML)
+
+# url
+swim_wiki = "http://en.wikipedia.org/wiki/World_record_progression_1500_metres_freestyle"
+@
+
+\vspace{3mm}
+Since we want the first table, we specify the parameter \highcode{which = 1} 
+<<wiki_table, eval=FALSE>>=
+# reading HTML table
+swim1500 = readHTMLTable(swim_wiki, which = 1, stringsAsFactors = FALSE)
+@
+
+Note that we can pass \code{data.frame()} parameters, in this case \highcode{stringsAsFactors = FALSE}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading data in an HTML Table}
+
+<<mywiki, echo=4, message=FALSE>>=
+library(XML)
+myswim = "/Users/Gaston/Documents/Data_Technologies/data/swimming1500.html"
+swim1500 = readHTMLTable(myswim, which = 1, stringsAsFactors = FALSE)
+head(swim1500)
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{R script and RData}
+
+\begin{block}{R script and RData}
+Last but not least, we can also import data inside an R script and in an \highcode{.RData} file. In this case the data files come from John Maindonald's website 
+ \begin{itemize}
+  \item The table is in the form of an R script \\
+{\scriptsize 
+\url{http://maths-people.anu.edu.au/~johnm/r/misc-data/travelbooks.R}}
+  \item The other type of data is in reality a bunch of data sets in the form of an \code{.RDtat} file \\
+{\scriptsize 
+\url{http://maths-people.anu.edu.au/~johnm/r/dsets/usingR.RData}}
+ \end{itemize}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{travelbooks Data}
+
+Travelbooks Data \low{(by John Maindolnald)}
+\begin{center}
+\includegraphics[width=8cm]{images/travelbooks_data.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading R script with source()}
+
+To read the script we simply need to use the function \highcode{source()}
+<<books, eval=FALSE, message=FALSE>>=
+# url
+travelbooks = "http://maths-people.anu.edu.au/~johnm/r/misc-data/travelbooks.R"
+
+# sourcing file
+source(travelbooks)
+@
+
+<<mybooks, echo=3>>=
+travelbooks = "/Users/Gaston/Documents/Data_Technologies/data/travelbooks.R"
+source(travelbooks)
+travelbooks
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+\frametitle{RData}
+
+\code{.RData} file \code{usingR.RData} contains several data frames
+\begin{center}
+\includegraphics[width=8cm]{images/dsets_data.png}
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]
+\frametitle{Reading RData data sets}
+
+For those data sets that are inside an \code{.RData} file, we need to use the function \highcode{load()} and pass the file with \highcode{url()}
+
+<<RData, eval=FALSE, message=FALSE>>=
+# let's remove all objects in session
+rm(list  = ls())
+
+# url with .RData
+load(url("http://maths-people.anu.edu.au/~johnm/r/dsets/usingR.RData"))
+@
+
+<<myRData, echo=-c(1,2)>>=
+myRData = "/Users/Gaston/Documents/Data_Technologies/data/usingR.RData"
+load(myRData)
+# list of read data sets 
+ls()
+@
+
+\end{frame}
+
+%------------------------------------------------
+
+\end{document}
