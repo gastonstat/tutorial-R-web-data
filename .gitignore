@@ -1,0 +1,8 @@
+# Mac specific
+.DS_Store
+
+# R stuff
+.Rhistory
+
+# latex specific
+0*/.DS_Store
