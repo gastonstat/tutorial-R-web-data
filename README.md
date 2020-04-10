@@ -6,11 +6,11 @@ using R to get data from the Web.
 1. [Introduction](https://github.com/gastonstat/tutorial-R-web-data/blob/master/01-introduction/01-introduction.pdf)
 2. [Reading Files](https://github.com/gastonstat/tutorial-R-web-data/blob/master/02-reading-files/02-reading-files.pdf)
 3. [XML Basics](https://github.com/gastonstat/tutorial-R-web-data/blob/master/03-xml-basics/03-xml-basics.pdf)
-4. [Parsing XML](https://github.com/gastonstat/tutorial-R-web-data/blob/master/01-introduction/04-parsing-xml.pdf)
-5. [JSON Data](https://github.com/gastonstat/tutorial-R-web-data/blob/master/01-introduction/05-json-data.pdf)
-6. [HTTP Basics](https://github.com/gastonstat/tutorial-R-web-data/blob/master/01-introduction/06-http-basics-curl.pdf)
-7. [Web Forms](https://github.com/gastonstat/tutorial-R-web-data/blob/master/01-introduction/07-web-forms.pdf)
-8. [Web APIs](https://github.com/gastonstat/tutorial-R-web-data/blob/master/01-introduction/08-web-apis.pdf)
+4. [Parsing XML](https://github.com/gastonstat/tutorial-R-web-data/blob/master/04-parsing-xml/04-parsing-xml.pdf)
+5. [JSON Data](https://github.com/gastonstat/tutorial-R-web-data/blob/master/05-json-data/05-json-data.pdf)
+6. [HTTP Basics](https://github.com/gastonstat/tutorial-R-web-data/blob/master/06-http-basics-curl/06-http-basics-curl.pdf)
+7. [Web Forms](https://github.com/gastonstat/tutorial-R-web-data/blob/master/07-web-forms/07-web-forms.pdf)
+8. [Web APIs](https://github.com/gastonstat/tutorial-R-web-data/blob/master/08-web-apis/08-web-apis.pdf)
 
 
 -----
